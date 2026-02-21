@@ -12,16 +12,24 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@supabase/supabase-js": "^2.97.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.2.1",
     "multer": "^2.0.2",
     "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.13"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/srinidhikulkarni16/trustivo-backend.git"
+  },
+  "bugs": {
+    "url": "https://github.com/srinidhikulkarni16/trustivo-backend/issues"
+  },
+  "homepage": "https://github.com/srinidhikulkarni16/trustivo-backend#readme"
 }
