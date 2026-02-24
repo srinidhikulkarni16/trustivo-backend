@@ -59,3 +59,14 @@ CREATE TABLE public_sign_tokens (
     used BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+DROP TABLE documents CASCADE;
+CREATE TABLE documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    file_name TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    public_url TEXT NOT NULL,
+    status TEXT DEFAULT 'draft',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);

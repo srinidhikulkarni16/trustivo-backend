@@ -1,22 +1,25 @@
-import supabase from "../config/supabase.js";
+import supabase from '../config/supabase.js';
+import bcrypt from 'bcryptjs';
 
-export const findUserByEmail=async(email)=>{
-  const {data, error}=await supabase 
-  .from("users")
-  .select("*")
-  .eq("email", email)
-  .single();
+export const findUserByEmail = async (email) => {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', email)
+    .maybeSingle();
 
-  if (error) return null;
+  if (error) throw error;
   return data;
 };
 
-export const CreateUser=async(userData)=>{
-  const {data, error}=await supabase 
-  .from("users")
-  .insert([userData])
-  .select()
-  .single();
+export const createUser = async ({ name, email, password }) => {
+  const hashedPassword = await bcrypt.hash(password, 12);
+
+  const { data, error } = await supabase
+    .from('users')
+    .insert([{ name, email, password: hashedPassword }])
+    .select()
+    .maybeSingle();
 
   if (error) throw error;
   return data;
