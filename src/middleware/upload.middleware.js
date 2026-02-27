@@ -4,18 +4,12 @@ const storage = multer.memoryStorage();
 
 const allowedMimeTypes = [
   "application/pdf",
-
-  // Word
   "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-
-  // Excel
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-
-  // Images
-  "image/png",
   "image/jpeg",
+  "image/png",
   "image/jpg",
   "image/webp"
 ];
@@ -31,5 +25,5 @@ const fileFilter = (req, file, cb) => {
 export const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 15 * 1024 * 1024 }
+  limits: { fileSize: 20 * 1024 * 1024 } // 20MB
 });

@@ -2,6 +2,9 @@
 .branches
 .temp
 
+#uploaded files
+uploads/
+
 # dotenvx
 .env.keys
 .env.local

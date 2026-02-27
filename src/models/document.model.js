@@ -10,7 +10,7 @@ export const createDocument = async ({
     .insert([
       {
         owner_id: ownerId,
-        title: title,
+        title,
         file_path: filePath,
       },
     ])

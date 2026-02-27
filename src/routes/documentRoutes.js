@@ -1,23 +1,64 @@
 import express from "express";
+import { verifyToken } from "../middleware/auth.middleware.js";
+import { checkDocumentOwner } from "../middleware/checkDocumentOwner.js";
+import { upload } from "../middleware/upload.middleware.js";
+
 import {
   uploadDocument,
   getUserDocuments,
   addSigner,
   saveSignaturePosition,
   generatePublicSignToken,
-  generateSignedPdf,
+  generateSignedPdf
 } from "../controllers/documentController.js";
-import { verifyToken } from "../middleware/auth.middleware.js";
-import { upload } from "../middleware/multer.js";
 
 const router = express.Router();
 
-// Routes
-router.post("/upload", verifyToken, upload.single("pdf"), uploadDocument);
-router.get("/", verifyToken, getUserDocuments);
-router.post("/:documentId/signer", verifyToken, addSigner);
-router.post("/:documentId/:signerId/signature", verifyToken, saveSignaturePosition);
-router.post("/:documentId/:signerId/token", verifyToken, generatePublicSignToken);
-router.post("/:documentId/sign", verifyToken, generateSignedPdf);
+/* Upload */
+router.post(
+  "/upload",
+  verifyToken,
+  upload.single("file"),
+  uploadDocument
+);
+
+/* Dashboard */
+router.get(
+  "/my-documents",
+  verifyToken,
+  getUserDocuments
+);
+
+/* Signers */
+router.post(
+  "/:documentId/add-signer",
+  verifyToken,
+  checkDocumentOwner,
+  addSigner
+);
+
+/* Signature box */
+router.post(
+  "/:documentId/:signerId/position",
+  verifyToken,
+  checkDocumentOwner,
+  saveSignaturePosition
+);
+
+/* Public token */
+router.post(
+  "/:documentId/:signerId/token",
+  verifyToken,
+  checkDocumentOwner,
+  generatePublicSignToken
+);
+
+/* Generate signed file */
+router.post(
+  "/:documentId/generate",
+  verifyToken,
+  checkDocumentOwner,
+  generateSignedPdf
+);
 
 export default router;

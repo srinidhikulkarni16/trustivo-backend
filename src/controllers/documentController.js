@@ -2,160 +2,281 @@ import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import supabase from "../config/supabase.js";
 import crypto from "crypto";
 
-// UPLOAD DOCUMENT
+/* =====================================================
+   OWNERSHIP CHECK
+===================================================== */
+const verifyOwnership = async (documentId, userId) => {
+
+  const { data } = await supabase
+    .from("documents")
+    .select("owner_id")
+    .eq("id", documentId)
+    .single();
+
+  return data?.owner_id === userId;
+};
+
+/* =====================================================
+   UPLOAD DOCUMENT
+===================================================== */
 export const uploadDocument = async (req, res) => {
   try {
-    console.log("BODY =>", req.body);
-    console.log("FILE =>", req.file);
 
-    if (!req.file) {
+    if (!req.file)
       return res.status(400).json({
-        message: "No file uploaded. Use form-data with key 'pdf'.",
+        message: "No file uploaded"
       });
-    }
 
-    const fileName = `${Date.now()}_${req.file.originalname}`;
-    const storagePath = `user_${req.user.id}/${fileName}`;
+    const fileName =
+      `${Date.now()}_${req.file.originalname}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("documents")
-      .upload(storagePath, req.file.buffer, { contentType: req.file.mimetype });
+    const storagePath =
+      `user_${req.user.id}/${fileName}`;
+
+    /* ---------- Upload to Storage ---------- */
+    const { error: uploadError } =
+      await supabase.storage
+        .from("documents")
+        .upload(
+          storagePath,
+          req.file.buffer,
+          { contentType: req.file.mimetype }
+        );
 
     if (uploadError) throw uploadError;
 
-    const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/documents/${storagePath}`;
+    const { data: publicData } =
+      supabase.storage
+        .from("documents")
+        .getPublicUrl(storagePath);
 
-    const { data, error } = await supabase
-      .from("documents")
-      .insert({
-        owner_id: req.user.id,
-        file_name: req.file.originalname,
-        file_path: storagePath,
-        public_url: publicUrl,
-        status: "draft",
-      })
-      .select()
-      .single();
+    /* ---------- Save DB ---------- */
+    const { data, error } =
+      await supabase
+        .from("documents")
+        .insert({
+          owner_id: req.user.id,
+          file_name: req.file.originalname,
+          file_path: storagePath,
+          public_url: publicData.publicUrl,
+          file_type: req.file.mimetype,
+          status: "draft"
+        })
+        .select()
+        .single();
 
     if (error) throw error;
 
-    await supabase.from("audit_logs").insert({
-      document_id: data.id,
-      action: "Document Uploaded",
-      performed_by: req.user.id,
+    res.status(201).json({
+      message: "Upload successful",
+      documentId: data.id,
+      fileUrl: data.public_url
     });
 
-    res.status(201).json(data);
-  } catch (error) {
-    console.error("UPLOAD ERROR =>", error.message);
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      message: err.message
+    });
   }
 };
 
-// GET USER DOCUMENTS
+/* =====================================================
+   GET USER DOCUMENTS
+===================================================== */
 export const getUserDocuments = async (req, res) => {
-  try {
-    const { data, error } = await supabase
+
+  const { data, error } =
+    await supabase
       .from("documents")
       .select("*")
       .eq("owner_id", req.user.id)
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+      .order("created_at", { ascending:false });
+
+  if (error)
+    return res.status(500).json(error);
+
+  res.json(data);
 };
 
-// ADD SIGNER
-export const addSigner = async (req, res) => {
-  try {
-    const { documentId } = req.params;
-    const { email, name } = req.body;
-    const { data, error } = await supabase
-      .from("signers")
-      .insert({ document_id: documentId, email, name })
-      .select()
-      .single();
-    if (error) throw error;
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+/* =====================================================
+   ADD SIGNER
+===================================================== */
+export const addSigner = async (req,res)=>{
+
+  const {documentId}=req.params;
+
+  if(!(await verifyOwnership(documentId,req.user.id)))
+    return res.status(403).json({message:"Access denied"});
+
+  const {email,name}=req.body;
+
+  const {data,error}=await supabase
+    .from("signers")
+    .insert({
+      document_id:documentId,
+      email,
+      name
+    })
+    .select()
+    .single();
+
+  if(error) throw error;
+
+  res.json(data);
 };
 
-// SAVE SIGNATURE POSITION
-export const saveSignaturePosition = async (req, res) => {
-  try {
-    const { documentId, signerId } = req.params;
-    const { x, y, pageNumber } = req.body;
-    const { data, error } = await supabase
-      .from("signatures")
-      .insert({ document_id: documentId, signer_id: signerId, x_position: x, y_position: y, page_number: pageNumber })
-      .select()
-      .single();
-    if (error) throw error;
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+/* =====================================================
+   SAVE SIGNATURE POSITION
+===================================================== */
+export const saveSignaturePosition =
+async(req,res)=>{
+
+const {documentId,signerId}=req.params;
+
+const {x,y,pageNumber}=req.body;
+
+const {data,error}=await supabase
+.from("signatures")
+.insert({
+document_id:documentId,
+signer_id:signerId,
+x_position:x,
+y_position:y,
+page_number:pageNumber,
+status:"Pending"
+})
+.select()
+.single();
+
+if(error) throw error;
+
+res.json(data);
 };
 
-// GENERATE PUBLIC SIGN TOKEN
-export const generatePublicSignToken = async (req, res) => {
-  try {
-    const { documentId, signerId } = req.params;
-    const token = crypto.randomBytes(32).toString("hex");
-    const { data, error } = await supabase
-      .from("public_sign_tokens")
-      .insert({ document_id: documentId, signer_id: signerId, token, expires_at: new Date(Date.now() + 86400000) })
-      .select()
-      .single();
-    if (error) throw error;
-    res.json({ token });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+/* =====================================================
+   PUBLIC SIGN TOKEN
+===================================================== */
+export const generatePublicSignToken =
+async(req,res)=>{
+
+const token=
+crypto.randomBytes(32).toString("hex");
+
+await supabase
+.from("public_sign_tokens")
+.insert({
+document_id:req.params.documentId,
+signer_id:req.params.signerId,
+token,
+expires_at:new Date(Date.now()+86400000)
+});
+
+res.json({token});
 };
 
-// GENERATE SIGNED PDF
-export const generateSignedPdf = async (req, res) => {
-  try {
-    const { documentId } = req.params;
-    const { data: document, error: docError } = await supabase.from("documents").select("*").eq("id", documentId).single();
-    if (docError || !document) return res.status(404).json({ message: "Document not found" });
+/* =====================================================
+   FINAL SIGNED PDF
+===================================================== */
+export const generateSignedPdf =
+async(req,res)=>{
 
-    const { data: fileData, error: downloadError } = await supabase.storage.from("documents").download(document.file_path);
-    if (downloadError) throw downloadError;
+try{
 
-    const pdfBytes = await fileData.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(pdfBytes);
-    const pages = pdfDoc.getPages();
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+const {documentId}=req.params;
 
-    const { data: signatures, error: sigError } = await supabase.from("signatures").select("*").eq("document_id", documentId);
-    if (sigError) throw sigError;
+/* ---------- Fetch Document ---------- */
+const {data:document}=await supabase
+.from("documents")
+.select("*")
+.eq("id",documentId)
+.single();
 
-    signatures.forEach(sig => {
-      const page = pages[sig.page_number - 1];
-      const { height } = page.getSize();
-      page.drawText("Signed", { x: sig.x_position, y: height - sig.y_position, size: 16, font, color: rgb(0, 0, 0) });
-    });
+/* ✅ Allow signing ONLY PDFs */
+if(!document.file_type.includes("pdf"))
+return res.status(400).json({
+message:"Only PDF files can be signed"
+});
 
-    const signedPdfBytes = await pdfDoc.save();
-    const signedPath = `signed/${document.owner_id}/${Date.now()}_signed.pdf`;
+/* ---------- Download ---------- */
+const {data:fileData}=
+await supabase.storage
+.from("documents")
+.download(document.file_path);
 
-    const { error: uploadError } = await supabase.storage.from("documents").upload(signedPath, signedPdfBytes, { contentType: "application/pdf" });
-    if (uploadError) throw uploadError;
+const pdfBytes=
+await fileData.arrayBuffer();
 
-    const signedUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/documents/${signedPath}`;
+const pdfDoc=
+await PDFDocument.load(pdfBytes);
 
-    await supabase.from("documents").update({ status: "completed", file_path: signedPath, public_url: signedUrl }).eq("id", documentId);
+const pages=pdfDoc.getPages();
 
-    await supabase.from("audit_logs").insert({ document_id: documentId, action: "Document Signed" });
+const font=
+await pdfDoc.embedFont(
+StandardFonts.Helvetica
+);
 
-    res.json({ message: "PDF signed successfully", signedUrl });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+/* ---------- Signed Positions ---------- */
+const {data:signatures}=
+await supabase
+.from("signatures")
+.select("*")
+.eq("document_id",documentId)
+.eq("status","Signed");
+
+signatures.forEach(sig=>{
+
+const page=
+pages[sig.page_number-1];
+
+const {height}=page.getSize();
+
+page.drawText("Signed",{
+x:sig.x_position,
+y:height-sig.y_position,
+size:16,
+font,
+color:rgb(0,0,0)
+});
+});
+
+const finalPdf=
+await pdfDoc.save();
+
+const signedPath=
+`signed/${document.owner_id}/${Date.now()}.pdf`;
+
+await supabase.storage
+.from("documents")
+.upload(
+signedPath,
+finalPdf,
+{contentType:"application/pdf"}
+);
+
+const {data:urlData}=
+supabase.storage
+.from("documents")
+.getPublicUrl(signedPath);
+
+await supabase
+.from("documents")
+.update({
+status:"completed",
+file_path:signedPath,
+public_url:urlData.publicUrl
+})
+.eq("id",documentId);
+
+res.json({
+message:"Signed PDF generated",
+url:urlData.publicUrl
+});
+
+}catch(err){
+res.status(500).json({
+message:err.message
+});
+}
 };
