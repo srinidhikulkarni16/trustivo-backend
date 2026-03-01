@@ -13,7 +13,7 @@ import { upload } from "../middleware/multer.js";
 
 const router = express.Router();
 
-// ✅ Upload PDF (with JWT auth)
+// Upload PDF (with JWT auth)
 router.post("/upload", verifyToken, upload.single("pdf"), uploadDocument);
 
 // Other protected routes
