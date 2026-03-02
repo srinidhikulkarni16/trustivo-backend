@@ -1,13 +1,14 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// Route Imports
-import authRoutes from './src/routes/auth.routes.js';
-import dashboardRoutes from './src/routes/dashboard.routes.js';
-import documentRoutes from './src/routes/documentRoutes.js';
+/* ================= ROUTES ================= */
+import authRoutes from "./src/routes/auth.routes.js";
+import dashboardRoutes from "./src/routes/dashboard.routes.js";
+import documentRoutes from "./src/routes/documentRoutes.js";
+import signatureRoutes from "./src/routes/signature.routes.js"; 
 
 dotenv.config();
 
@@ -16,31 +17,52 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// ✅ 1. FIXED CORS CONFIGURATION
-// This allows your frontend (5173) to send credentials (cookies/auth headers) to the backend (5000)
-app.use(cors({ 
-  origin: 'http://localhost:5173', 
-  credentials: true, // Required for 'include' credentials mode
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+/* ================= CORS ================= */
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
-// Middleware
+/* ================= BODY PARSER ================= */
+/* MUST COME BEFORE ROUTES */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ✅ 2. ROUTE ALIGNMENT
-// Ensure these match exactly what you call in your React 'api.js' service
-app.use('/api/auth', authRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/docs', documentRoutes); // Changed to /docs if your Upload.jsx uses '/docs/upload'
+/* ================= STATIC FILES ================= */
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"))
+);
 
-// Error Handling Middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
+/* ================= API ROUTES ================= */
+app.use("/api/auth", authRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/docs", documentRoutes);
+
+/* ✅ SIGNATURE ROUTE (MISSING BEFORE) */
+app.use("/api/signatures", signatureRoutes);
+
+/* ================= HEALTH CHECK ================= */
+app.get("/", (req, res) => {
+  res.send("API running ✅");
 });
 
+/* ================= ERROR HANDLER ================= */
+app.use((err, req, res, next) => {
+  console.error("SERVER ERROR:", err.stack);
+
+  res.status(500).json({
+    message: "Something went wrong!",
+  });
+});
+
+/* ================= SERVER START ================= */
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+app.listen(PORT, () =>
+  console.log(`🚀 Server running on port ${PORT}`)
+);

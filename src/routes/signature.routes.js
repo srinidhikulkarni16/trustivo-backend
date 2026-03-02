@@ -1,9 +1,33 @@
-import express from "express";
-import { createSignature } from "../controllers/signatureController.js";
-import authMiddleware from "../middleware/authMiddleware.js";
+import jwt from "jsonwebtoken";
 
-const router = express.Router();
+const authMiddleware = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
 
-router.post("/", authMiddleware, createSignature);
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        message: "No token provided",
+      });
+    }
 
-export default router;
+    const token = authHeader.split(" ")[1];
+
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET
+    );
+
+    // attach user to request
+    req.user = decoded;
+
+    next();
+  } catch (error) {
+    console.error("AUTH ERROR:", error.message);
+
+    return res.status(401).json({
+      message: "Invalid or expired token",
+    });
+  }
+};
+
+export default authMiddleware;

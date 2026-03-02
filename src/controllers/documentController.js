@@ -2,9 +2,7 @@ import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import supabase from "../config/supabase.js";
 import crypto from "crypto";
 
-/* =====================================================
-   OWNERSHIP CHECK
-===================================================== */
+/*OWNERSHIP CHECK*/
 const verifyOwnership = async (documentId, userId) => {
 
   const { data } = await supabase
@@ -16,9 +14,7 @@ const verifyOwnership = async (documentId, userId) => {
   return data?.owner_id === userId;
 };
 
-/* =====================================================
-   UPLOAD DOCUMENT
-===================================================== */
+/*UPLOAD DOCUMENT*/
 export const uploadDocument = async (req, res) => {
   try {
 
@@ -192,7 +188,7 @@ const {data:document}=await supabase
 .eq("id",documentId)
 .single();
 
-/* ✅ Allow signing ONLY PDFs */
+/*Allow signing ONLY PDFs */
 if(!document.file_type.includes("pdf"))
 return res.status(400).json({
 message:"Only PDF files can be signed"
