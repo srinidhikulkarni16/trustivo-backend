@@ -16,3 +16,6 @@ dist
 .vscode
 .idea
 .DS_Store
+
+#folder
+src/unused/

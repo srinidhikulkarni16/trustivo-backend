@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 
 /* ================= ROUTES ================= */
 import authRoutes from "./src/routes/auth.routes.js";
-import dashboardRoutes from "./src/routes/dashboard.routes.js";
+// import dashboardRoutes from "./src/routes/dashboard.routes.js";
 import documentRoutes from "./src/routes/documentRoutes.js";
 import signatureRoutes from "./src/routes/signature.routes.js"; 
 
@@ -40,7 +40,7 @@ app.use(
 
 /* ================= API ROUTES ================= */
 app.use("/api/auth", authRoutes);
-app.use("/api/dashboard", dashboardRoutes);
+// app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/docs", documentRoutes);
 
 /* ✅ SIGNATURE ROUTE (MISSING BEFORE) */

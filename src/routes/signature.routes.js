@@ -1,33 +1,28 @@
-import jwt from "jsonwebtoken";
+import express from "express";
+import { verifyToken } from "../middleware/auth.middleware.js";
+import {
+  saveSignature,
+  getSignatures,
+  updateSignatureStatus,
+  generatePublicLink,
+  verifyPublicToken,
+  submitPublicSignature,
+  getAuditLog,
+} from "../controllers/signatureController.js";
 
-const authMiddleware = (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
+const router = express.Router();
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({
-        message: "No token provided",
-      });
-    }
+// Public routes FIRST (no auth)
+router.get("/public/:token", verifyPublicToken);
+router.post("/public/:token/sign", submitPublicSignature);
 
-    const token = authHeader.split(" ")[1];
+// Specific routes BEFORE wildcard routes
+router.get("/audit/:documentId", verifyToken, getAuditLog);
+router.post("/", verifyToken, saveSignature);
+router.patch("/:id/status", verifyToken, updateSignatureStatus);
+router.post("/:documentId/send-link", verifyToken, generatePublicLink);
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
+// Wildcard LAST
+router.get("/:documentId", verifyToken, getSignatures);
 
-    // attach user to request
-    req.user = decoded;
-
-    next();
-  } catch (error) {
-    console.error("AUTH ERROR:", error.message);
-
-    return res.status(401).json({
-      message: "Invalid or expired token",
-    });
-  }
-};
-
-export default authMiddleware;
+export default router;
