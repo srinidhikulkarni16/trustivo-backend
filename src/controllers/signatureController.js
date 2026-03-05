@@ -106,7 +106,7 @@ export const generatePublicLink = async (req, res) => {
     if (!signerEmail) return res.status(400).json({ message: "Signer email required" });
 
     const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     const { error } = await supabase.from("public_sign_tokens").insert([{
       document_id: documentId,
@@ -121,44 +121,46 @@ export const generatePublicLink = async (req, res) => {
 
     const signUrl = `${process.env.FRONTEND_URL}/sign/${token}`;
 
-    // Send email
-    try {
-      const transporter = nodemailer.createTransporter({
-        service: "gmail",
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
+    // FIXED: Changed createTransporter to createTransport
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER, // Ensure this is in your Render Environment Variables
+        pass: process.env.EMAIL_PASS, // Ensure this is a 16-digit App Password
+      },
+    });
 
+    try {
       await transporter.sendMail({
         from: `"Trustivo" <${process.env.EMAIL_USER}>`,
         to: signerEmail,
         subject: "You have been requested to sign a document",
         html: `
-          <div style="font-family:sans-serif;max-width:500px;margin:auto;padding:24px;border:1px solid #eee;border-radius:12px">
-            <h2 style="color:#881337">Trustivo — Sign Request</h2>
-            <p>Hi ${signerName || signerEmail},</p>
-            <p>You have been requested to sign a document. Click the button below to review and sign:</p>
-            <a href="${signUrl}" style="display:inline-block;margin:16px 0;padding:12px 24px;background:#881337;color:white;border-radius:8px;text-decoration:none;font-weight:bold">
-              Sign Document
-            </a>
-            <p style="color:#999;font-size:12px">This link expires in 7 days. If you didn't expect this, ignore this email.</p>
+          <div style="font-family: sans-serif; max-width: 500px; margin: auto; padding: 24px; border: 1px solid #eee; border-radius: 20px;">
+            <h2 style="color: #881337; font-size: 24px; font-weight: 800; margin-bottom: 8px;">Trustivo <span style="font-weight: 400;">Sign Request</span></h2>
+            <p style="color: #6b7280; font-size: 14px;">Hi ${signerName || signerEmail},</p>
+            <p style="color: #374151; font-size: 14px; line-height: 1.5;">You have been requested to sign a document. Click the button below to review and sign securely.</p>
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${signUrl}" style="display: inline-block; padding: 14px 32px; background-color: #881337; color: #ffffff; border-radius: 12px; text-decoration: none; font-weight: 700; box-shadow: 0 10px 15px -3px rgba(136, 19, 55, 0.2);">
+                Sign Document
+              </a>
+            </div>
+            <p style="color: #9ca3af; font-size: 12px; border-top: 1px solid #f3f4f6; pt: 16px;">
+              This link expires in 7 days. If you didn't expect this, you can safely ignore this email.
+            </p>
           </div>
         `,
       });
     } catch (emailErr) {
-      console.warn("Email failed (non-blocking):", emailErr.message);
+      console.error("Email failed:", emailErr.message);
+      // Optional: Inform the user the email failed but the link is ready
+      return res.status(200).json({ 
+        message: "Link generated, but email failed. Copy manually.", 
+        signUrl, 
+        token,
+        emailError: true 
+      });
     }
-
-    // Audit log
-    await supabase.from("audit_logs").insert([{
-      document_id: documentId,
-      user_id: req.user.id,
-      action: "sign_link_generated",
-      ip_address: req.ip,
-      metadata: { signerEmail, expiresAt },
-    }]);
 
     res.json({ message: "Sign link generated", signUrl, token });
   } catch (err) {
