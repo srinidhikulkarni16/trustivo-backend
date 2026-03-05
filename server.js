@@ -13,19 +13,20 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 /*  PRODUCTION-READY CORS */
+// Ensure FRONTEND_URL is set in Render backend environment variables
 const allowedOrigins = [process.env.FRONTEND_URL].filter(Boolean);
 
 app.use(
   cors({
-    origin: function (origin, callback) {
+    origin: (origin, callback) => {
       // Allow requests with no origin (like Postman or mobile apps)
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) {
-        callback(null, true);
+        return callback(null, true);
       } else {
-        console.warn(`⚠️  Blocked CORS request from: ${origin}`);
-        callback(new Error("Not allowed by CORS"));
+        console.warn(`⚠️ Blocked CORS request from: ${origin}`);
+        return callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
@@ -52,6 +53,7 @@ import authRoutes from "./src/routes/auth.routes.js";
 import documentRoutes from "./src/routes/documentRoutes.js";
 import signatureRoutes from "./src/routes/signature.routes.js";
 
+// IMPORTANT: CORS must run BEFORE routes
 app.use("/api/auth", authRoutes);
 app.use("/api/docs", documentRoutes);
 app.use("/api/signatures", signatureRoutes);
@@ -70,6 +72,12 @@ app.get("/api/health", (req, res) => {
 /*  ERROR HANDLER */
 app.use((err, req, res, next) => {
   console.error("SERVER ERROR:", err.stack);
+
+  // Handle CORS errors gracefully
+  if (err.message === "Not allowed by CORS") {
+    return res.status(403).json({ message: err.message });
+  }
+
   res.status(500).json({ message: "Something went wrong!" });
 });
 
