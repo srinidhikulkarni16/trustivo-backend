@@ -101,12 +101,10 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`
-╔════════════════════════════════════════╗
-║   🚀 Trustivo API Server Running      ║
-║   📍 Port: ${PORT}                        ║
-║   🌍 Environment: ${process.env.NODE_ENV || "development"}           ║
-║   🔗 Health: http://localhost:${PORT}/api/health
-║   🎯 CORS: ${allowedOrigins.length} origin(s) allowed   ║
-╚════════════════════════════════════════╝
+    🚀 Trustivo API Server Running      
+    📍 Port: ${PORT}                        
+    🌍 Environment: ${process.env.NODE_ENV || "development"}           ║
+    🔗 Health: http://localhost:${PORT}/api/health
+    🎯 CORS: ${allowedOrigins.length} origin(s) allowed  
   `);
 });
