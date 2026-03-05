@@ -125,49 +125,37 @@ export const generatePublicLink = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.EMAIL_USER, // Ensure this is in your Render Environment Variables
-        pass: process.env.EMAIL_PASS, // Ensure this is a 16-digit App Password
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS, // Use the 16-digit App Password here
       },
     });
 
-    try {
-      await transporter.sendMail({
-        from: `"Trustivo" <${process.env.EMAIL_USER}>`,
-        to: signerEmail,
-        subject: "You have been requested to sign a document",
-        html: `
-          <div style="font-family: sans-serif; max-width: 500px; margin: auto; padding: 24px; border: 1px solid #eee; border-radius: 20px;">
-            <h2 style="color: #881337; font-size: 24px; font-weight: 800; margin-bottom: 8px;">Trustivo <span style="font-weight: 400;">Sign Request</span></h2>
-            <p style="color: #6b7280; font-size: 14px;">Hi ${signerName || signerEmail},</p>
-            <p style="color: #374151; font-size: 14px; line-height: 1.5;">You have been requested to sign a document. Click the button below to review and sign securely.</p>
-            <div style="text-align: center; margin: 32px 0;">
-              <a href="${signUrl}" style="display: inline-block; padding: 14px 32px; background-color: #881337; color: #ffffff; border-radius: 12px; text-decoration: none; font-weight: 700; box-shadow: 0 10px 15px -3px rgba(136, 19, 55, 0.2);">
-                Sign Document
-              </a>
-            </div>
-            <p style="color: #9ca3af; font-size: 12px; border-top: 1px solid #f3f4f6; pt: 16px;">
-              This link expires in 7 days. If you didn't expect this, you can safely ignore this email.
-            </p>
+    await transporter.sendMail({
+      from: `"Trustivo" <${process.env.EMAIL_USER}>`,
+      to: signerEmail,
+      subject: "You have been requested to sign a document",
+      html: `
+        <div style="font-family: sans-serif; max-width: 500px; margin: auto; padding: 32px; border: 1px solid #f3f4f6; border-radius: 24px; background-color: #ffffff;">
+          <h2 style="color: #881337; font-size: 24px; font-weight: 800; margin-bottom: 8px;">Trustivo <span style="font-weight: 400; color: #111827;">Sign Request</span></h2>
+          <p style="color: #4b5563; font-size: 14px;">Hi ${signerName || signerEmail},</p>
+          <p style="color: #374151; font-size: 14px; line-height: 1.6;">You have been requested to sign a document securely. Click the button below to review and sign.</p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${signUrl}" style="display: inline-block; padding: 14px 32px; background-color: #881337; color: #ffffff; border-radius: 12px; text-decoration: none; font-weight: 700;">
+              Sign Document
+            </a>
           </div>
-        `,
-      });
-    } catch (emailErr) {
-      console.error("Email failed:", emailErr.message);
-      // Optional: Inform the user the email failed but the link is ready
-      return res.status(200).json({ 
-        message: "Link generated, but email failed. Copy manually.", 
-        signUrl, 
-        token,
-        emailError: true 
-      });
-    }
+          <p style="color: #9ca3af; font-size: 12px; border-top: 1px solid #f3f4f6; padding-top: 16px;">
+            This link expires in 7 days. If you didn't expect this, you can safely ignore this email.
+          </p>
+        </div>
+      `,
+    });
 
-    res.json({ message: "Sign link generated", signUrl, token });
+    res.json({ message: "Sign link generated and email sent", signUrl, token });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
-
 /* ── VERIFY PUBLIC TOKEN ── */
 export const verifyPublicToken = async (req, res) => {
   try {
