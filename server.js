@@ -3,14 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-// import auditRoutes from "./src/routes/audit.routes.js";
 
-/*ROUTES*/
-import authRoutes from "./src/routes/auth.routes.js";
-// import dashboardRoutes from "./src/routes/dashboard.routes.js";
-import documentRoutes from "./src/routes/documentRoutes.js";
-import signatureRoutes from "./src/routes/signature.routes.js"; 
-
+/*  LOAD ENV FIRST */
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,17 +12,15 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-/*CORS - PRODUCTION READY */
-const allowedOrigins = [
-  process.env.FRONTEND_URL, // only deployed frontend
-].filter(Boolean);
+/*  PRODUCTION-READY CORS */
+const allowedOrigins = [process.env.FRONTEND_URL].filter(Boolean);
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps, Postman)
+      // Allow requests with no origin (like Postman or mobile apps)
       if (!origin) return callback(null, true);
-      
+
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -42,66 +34,52 @@ app.use(
   })
 );
 
-app.use(express.json());
-
-/*  BODY PARSER  */
-/* MUST COME BEFORE ROUTES */
+/*  PARSERS */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-/* REQUEST LOGGING (helpful for debugging in production) */
+/*  REQUEST LOGGING */
 app.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${req.method} ${req.path}`);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
 
-/*  STATIC FILES  */
-app.use(
-  "/uploads",
-  express.static(path.join(__dirname, "uploads"))
-);
+/*  STATIC FILES */
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-/*  API ROUTES  */
+/*  API ROUTES */
+import authRoutes from "./src/routes/auth.routes.js";
+import documentRoutes from "./src/routes/documentRoutes.js";
+import signatureRoutes from "./src/routes/signature.routes.js";
+
 app.use("/api/auth", authRoutes);
-// app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/docs", documentRoutes);
-
-/* SIGNATURE ROUTE (MISSING BEFORE) */
 app.use("/api/signatures", signatureRoutes);
-// app.use("/api/audit", auditRoutes);
 
-/*  HEALTH CHECK  */
-app.get("/", (req, res) => {
-  res.send("API running ✅");
-});
-
+/*  HEALTH CHECK */
+app.get("/", (req, res) => res.send("API running ✅"));
 app.get("/api/health", (req, res) => {
-  res.json({ 
+  res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "development",
-    message: "Trustivo API is healthy 🚀"
+    message: "Trustivo API is healthy 🚀",
   });
 });
 
-/*  ERROR HANDLER  */
+/*  ERROR HANDLER */
 app.use((err, req, res, next) => {
   console.error("SERVER ERROR:", err.stack);
-
-  res.status(500).json({
-    message: "Something went wrong!",
-  });
+  res.status(500).json({ message: "Something went wrong!" });
 });
 
-/*  SERVER START  */
+/*  START SERVER */
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
   console.log(`
     🚀 Trustivo API Server Running      
     📍 Port: ${PORT}                        
-    🌍 Environment: ${process.env.NODE_ENV || "development"}           ║
+    🌍 Environment: ${process.env.NODE_ENV || "development"}           
     🔗 Health: http://localhost:${PORT}/api/health
     🎯 CORS: ${allowedOrigins.length} origin(s) allowed  
   `);
