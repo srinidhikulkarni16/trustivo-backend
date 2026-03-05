@@ -20,10 +20,8 @@ const app = express();
 
 /*CORS - PRODUCTION READY */
 const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  process.env.FRONTEND_URL, // Production frontend URL from .env
-].filter(Boolean); // Remove undefined values
+  process.env.FRONTEND_URL, // only deployed frontend
+].filter(Boolean);
 
 app.use(
   cors({
